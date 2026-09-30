@@ -29,7 +29,7 @@
 ## 實測到的邊界（本場域，2026-09-30）
 
 - 完整備份讀取的是配置容量，不是使用量：32 GiB 磁碟、客體用 3 GB，讀 32.75 GB，107 MB/s。
-- qcow2 在兩次備份之間關機，下一次仍是增量，dirty bitmap 以持久化 bitmap 存在 qcow2 檔內（`qemu-img info` 可見）。官方 FAQ 說 raw 與 vmdk 會退回完整備份，本場域未測 raw。
+- qcow2 在兩次備份之間關機，下一次仍是增量，dirty bitmap 以持久化 bitmap 存在 qcow2 檔內（`qemu-img info` 可見），與官方 FAQ 一致。FAQ 說 raw 與 vmdk 會退回完整備份，本場域未測 raw。來源：https://www.qnap.com/en/how-to/faq/article/why-is-every-backup-of-my-proxmox-vm-a-full-backup
 - 本機不可變只鎖該版本新寫入的檔案（atime 設為到期時間）。與舊資料去重共用的 pack、儲存庫的 `config`、`keys/` 與舊 index 仍是可寫檔案。
 - 四次自動驗證前兩次成功，第 3、4 次在 4 秒內以「Virtualization Station is not responding」失敗，同一時段的即時還原與轉為永久都成功。驗證結果要逐次收進稽核軌跡。
 - 完整還原的速率（約 64 MB/s）低於備份讀取（107 MB/s），估算 RTO 要用還原速率。
