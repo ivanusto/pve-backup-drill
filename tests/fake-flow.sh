@@ -18,7 +18,13 @@ for last; do :; done
 exec sh -c "\$(printf '%s' "\$last" | sed 's#/usr/local/bin/canary.sh#$ROOT/canary.sh#')"
 EOF
 printf '#!/bin/sh\nexit 0\n' > "$T/bin/ok"
-printf '#!/bin/sh\necho "status: running"\n' > "$T/bin/qm"
+cat > "$T/bin/qm" <<'EOF'
+#!/bin/sh
+case "$1" in
+  list) printf '      VMID NAME STATUS\n       104 drill-recovered running\n' ;;
+  status) echo "status: running" ;;
+esac
+EOF
 chmod +x "$T/bin/"*
 export QM="$T/bin/qm" PING="$T/bin/ok" NC="$T/bin/ok" SSH="$T/bin/ssh" OUT="$T/drills.jsonl"
 
@@ -47,6 +53,10 @@ printf '%s\n' "$out" | grep -q '^RPO (data lost)   : 600 s' || fail "wrong RPO"
 "$ROOT/restore-drill.sh" 9001 192.0.2.10 --label pve --failed-at "$failed" --timeout 30 || fail "pve drill rc=$?"
 tail -n1 "$OUT" | grep -q '"t_exists":0,"t_running":0' || fail "pve json"
 tail -n1 "$OUT" | grep -q '"rpo_s":"600"' || fail "pve json rpo"
+
+# 2b. --name resolves the VMID the restore tool assigned
+"$ROOT/restore-drill.sh" auto 192.0.2.10 --name drill-recovered --label byname --timeout 30 || fail "name drill rc=$?"
+tail -n1 "$OUT" | grep -q '"vmid":"104"' || fail "name json vmid"
 
 # 3. --no-pve never calls qm (a qm that always fails would time out)
 QM=false "$ROOT/restore-drill.sh" 9002 192.0.2.10 --no-pve --label vs --timeout 30 || fail "no-pve drill rc=$?"

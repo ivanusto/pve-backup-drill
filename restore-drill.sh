@@ -17,6 +17,8 @@
 #   GUEST_IP  address the restored guest should answer on
 #   --failed-at  simulated failure time, passed to canary.sh verify for RPO
 #   --ssh     login for the guest, default root@GUEST_IP (key auth, BatchMode)
+#   --name    find the VMID by VM name in "qm list" (use VMID "auto" when
+#             the restore tool assigns the VMID itself)
 #   --no-pve  the restore lands outside Proxmox VE (HDP instant restore
 #             boots the VM on the NAS's Virtualization Station), so skip
 #             the qm steps; runs on any host with ping, nc and ssh
@@ -28,9 +30,9 @@ QM=${QM:-qm}; PING=${PING:-ping}; NC=${NC:-nc}; SSH=${SSH:-ssh}
 OUT=${OUT:-drills.jsonl}
 
 VMID=${1:-}; IP=${2:-}
-if [ -z "$VMID" ] || [ -z "$IP" ]; then sed -n '2,25p' "$0"; exit 64; fi
+if [ -z "$VMID" ] || [ -z "$IP" ]; then sed -n '2,27p' "$0"; exit 64; fi
 shift 2
-FAILED_AT=""; SSHTARGET="root@$IP"; TIMEOUT=1800; LABEL=""; PVE=1
+FAILED_AT=""; SSHTARGET="root@$IP"; TIMEOUT=1800; LABEL=""; PVE=1; NAME=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --failed-at) FAILED_AT=$2; shift 2 ;;
@@ -38,6 +40,7 @@ while [ $# -gt 0 ]; do
     --timeout)   TIMEOUT=$2; shift 2 ;;
     --label)     LABEL=$2; shift 2 ;;
     --no-pve)    PVE=0; shift ;;
+    --name)      NAME=$2; shift 2 ;;
     *) printf 'unknown option %s\n' "$1" >&2; exit 64 ;;
   esac
 done
@@ -51,9 +54,16 @@ deadline() { [ "$(since)" -lt "$TIMEOUT" ] || { stamp "TIMEOUT after ${TIMEOUT}s
 stamp "T0 start  vmid=$VMID ip=$IP ${LABEL:+label=$LABEL}"
 
 if [ "$PVE" -eq 1 ]; then
-  # T1: VM exists in the cluster config
-  while ! $QM config "$VMID" >/dev/null 2>&1; do deadline "vm exists"; sleep 2; done
-  t1=$(date -u +%s); stamp "T1 vm exists"
+  # T1: VM exists in the cluster config (qm is node-local: run this on
+  # the node the restore targets)
+  while :; do
+    if [ -n "$NAME" ]; then
+      VMID=$($QM list 2>/dev/null | awk -v n="$NAME" '$2 == n {print $1; exit}')
+    fi
+    if [ -n "$VMID" ] && [ "$VMID" != auto ] && $QM config "$VMID" >/dev/null 2>&1; then break; fi
+    deadline "vm exists"; sleep 2
+  done
+  t1=$(date -u +%s); stamp "T1 vm exists vmid=$VMID"
 
   # T2: VM running
   while ! $QM status "$VMID" 2>/dev/null | grep -q 'running'; do deadline "vm running"; sleep 2; done
