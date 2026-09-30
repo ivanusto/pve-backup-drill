@@ -29,6 +29,14 @@ sudo ./canary.sh install
 ./restore-drill.sh 921 192.168.x.y --label "3. 完整還原" --failed-at 2026-10-02T03:10:00Z
 ```
 
+還原工具自己分配 VMID 時（例如 HDP 的完整還原），VMID 填 `auto`，用 `--name` 依 VM 名稱找：
+
+```sh
+./restore-drill.sh auto 192.168.x.y --name myvm-recovered --label "3. 完整還原" --failed-at 2026-10-02T03:10:00Z
+```
+
+`qm` 只看得到本機節點的 VM，請在還原目標節點上執行，或設 `QM="ssh root@<節點> qm"`。
+
 還原落在 PVE 以外，例如 HDP 的即時還原會把 VM 開在 NAS 的 Virtualization Station，這時加 `--no-pve`，跳過 `qm` 的兩步，VMID 欄位隨意填：
 
 ```sh
