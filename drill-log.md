@@ -32,4 +32,8 @@
 
 HDP 完整還原的三個預設值要逐一確認：還原模式預設覆蓋原 VM；以新名稱建立時預設產生新 MAC（客體網路綁 MAC 就會斷線）；預設不自動開機。VMID 由 HDP 分配，用 `restore-drill.sh auto <IP> --name <VM 名稱>`。
 
-演練後檢查：新 VM 的每一顆磁碟（含 cloud-init 光碟）是否仍引用原 VM 的磁碟。
+演練後檢查與清理：
+
+- 新 VM 的每一顆磁碟（含 cloud-init 光碟）是否仍引用原 VM 的磁碟。在新 VM 上移除這顆光碟，PVE 會刪掉原 VM 的 cloud-init 磁碟。
+- HDP 的自動保護規則若開著，還原出來的 VM 會被收進預設原則（實測每台兩筆），演練後要停用或刪除這些 Workload。
+- 轉為永久的 VM 在 Virtualization Station 預設自動啟動；要從 Virtualization Station 刪除，刪除後磁碟檔仍留在目的資料夾。
