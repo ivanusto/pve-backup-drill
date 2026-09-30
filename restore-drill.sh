@@ -28,7 +28,7 @@ QM=${QM:-qm}; PING=${PING:-ping}; NC=${NC:-nc}; SSH=${SSH:-ssh}
 OUT=${OUT:-drills.jsonl}
 
 VMID=${1:-}; IP=${2:-}
-[ -n "$VMID" ] && [ -n "$IP" ] || { sed -n '2,25p' "$0"; exit 64; }
+if [ -z "$VMID" ] || [ -z "$IP" ]; then sed -n '2,25p' "$0"; exit 64; fi
 shift 2
 FAILED_AT=""; SSHTARGET="root@$IP"; TIMEOUT=1800; LABEL=""; PVE=1
 while [ $# -gt 0 ]; do
